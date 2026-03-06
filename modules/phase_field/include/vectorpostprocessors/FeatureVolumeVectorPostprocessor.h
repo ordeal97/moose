@@ -12,6 +12,7 @@
 #include "GeneralVectorPostprocessor.h"
 #include "MooseVariableDependencyInterface.h"
 #include "BoundaryRestrictable.h"
+#include "Coupleable.h"
 
 #include <array>
 
@@ -29,6 +30,7 @@ class FeatureFloodCount;
  * one less thing for the user of this class to worry about.
  */
 class FeatureVolumeVectorPostprocessor : public GeneralVectorPostprocessor,
+                                         public Coupleable,
                                          public MooseVariableDependencyInterface,
                                          public BoundaryRestrictable
 {
@@ -56,9 +58,12 @@ protected:
 
   VectorPostprocessorValue & _var_num;
   VectorPostprocessorValue & _feature_volumes;
+  VectorPostprocessorValue & _feature_variable_element_integral;
   VectorPostprocessorValue & _intersects_bounds;
   VectorPostprocessorValue & _intersects_specified_bounds;
   VectorPostprocessorValue & _percolated;
+  /// Holds the solution at current quadrature points
+  const VariableValue & _variable_to_integrate;
 
   /// Indicates whether the calculation should be run on volumes or area of a boundary
   bool _is_boundary_restricted;
@@ -75,11 +80,16 @@ private:
                                std::size_t num_features,
                                unsigned int side);
 
-  /// Calculate the integral value of the passed in variable (index)
-  Real computeIntegral(std::size_t var_index) const;
+  /// Calculate the integral value of the passed in variable (index).
+  /// if var_to_integrate = nullptr compute feature volume, else compute the integral of the variable over the feature
+  Real computeIntegral(std::size_t var_index,
+                       const Elem * elem,
+                       const MooseArray<Real> * var_to_integrate) const;
 
   /// Calculate the integral on the face if boundary is supplied as input
-  Real computeFaceIntegral(std::size_t var_index) const;
+  /// if var_to_integrate = nullptr compute feature surface, else compute the integral of the variable over the feature
+  Real computeFaceIntegral(std::size_t var_index,
+                           const MooseArray<Real> * var_to_integrate = nullptr) const;
 
   const std::vector<MooseVariableFEBase *> & _vars;
   std::vector<const VariableValue *> _coupled_sln;
